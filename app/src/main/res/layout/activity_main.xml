@@ -61,14 +61,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnThreadNewName"/>
 
-    <Button
-        android:id="@+id/btnWait"
-        android:onClick="onClick"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Wait示例"
-        app:layout_constraintStart_toEndOf="@+id/btnSleep"
-        app:layout_constraintTop_toBottomOf="@+id/btnJoin"/>
 
     <Button
         android:id="@+id/btnSynchronized"
@@ -77,7 +69,7 @@
         android:layout_height="wrap_content"
         android:text="synchronized示例抢票"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnWait"/>
+        app:layout_constraintTop_toBottomOf="@+id/btnSleep"/>
 
     <Button
         android:id="@+id/btnSynchronized2"
@@ -106,6 +98,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnSynchronized3"/>
 
+
+    <Button
+        android:id="@+id/btnWait"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wait示例"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnSynchronized4"/>
+
     <Button
         android:id="@+id/btnWaitNotify"
         android:onClick="onClick"
@@ -113,6 +115,6 @@
         android:layout_height="wrap_content"
         android:text="Wait和Notify示例"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnSynchronized4"/>
+        app:layout_constraintTop_toBottomOf="@+id/btnWait"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
