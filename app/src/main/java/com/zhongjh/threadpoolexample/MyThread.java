@@ -7,7 +7,7 @@ package com.zhongjh.threadpoolexample;
  */
 public class MyThread extends Thread {
 
-    private static final int COUNT = 10;
+    private static final int COUNT = 3;
 
     /**
      * 线程名称

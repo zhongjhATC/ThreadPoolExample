@@ -52,4 +52,67 @@
         app:layout_constraintStart_toEndOf="@+id/btnThreadNewName"
         app:layout_constraintTop_toBottomOf="@+id/btnThread"/>
 
+    <Button
+        android:id="@+id/btnSleep"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Sleep示例"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnThreadNewName"/>
+
+    <Button
+        android:id="@+id/btnWait"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wait示例"
+        app:layout_constraintStart_toEndOf="@+id/btnSleep"
+        app:layout_constraintTop_toBottomOf="@+id/btnJoin"/>
+
+    <Button
+        android:id="@+id/btnSynchronized"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="synchronized示例抢票"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnWait"/>
+
+    <Button
+        android:id="@+id/btnSynchronized2"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="多个线程调用同一个对象锁"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnSynchronized"/>
+
+    <Button
+        android:id="@+id/btnSynchronized3"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="两个线程分别调用不同对象锁"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnSynchronized2"/>
+
+    <Button
+        android:id="@+id/btnSynchronized4"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="两个线程分别调用对象锁、类锁"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnSynchronized3"/>
+
+    <Button
+        android:id="@+id/btnWaitNotify"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wait和Notify示例"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnSynchronized4"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
