@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 /**
@@ -34,6 +35,9 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case R.id.btnSleep:
                 testSleep();
+                break;
+            case R.id.btnYield:
+                testYield();
                 break;
             case R.id.btnWait:
                 testWait();
@@ -112,6 +116,13 @@ public class MainActivity extends AppCompatActivity {
     private void testSleep() {
         MyThreadSleep myThread1 = new MyThreadSleep();
         myThread1.start();
+    }
+
+    /**
+     * Yield示例
+     */
+    private void testYield() {
+
     }
 
     private final Object lockObject = new Object();
@@ -233,7 +244,14 @@ public class MainActivity extends AppCompatActivity {
         }.start();
     }
 
+    /**
+     * 锁对象
+     */
     private final Object lock = new Object();
+    /**
+     * 是否执行子线程标志位
+     */
+    boolean beShouldSub = true;
 
     /**
      * wait和notify示例
@@ -245,41 +263,63 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 for (int i = 0; i < 10; i++) {
-                    synchronized (lock) {
-                        for (int j = 0; j < 2; j++) {
-                            System.out.println("子循环第" + (j + 1) + "次");
-                        }
-                        // 唤醒
-                        System.out.println("lock子唤醒");
-                        lock.notify();
-                        // 等待
-                        try {
-                            System.out.println("lock子等待");
-                            lock.wait();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                    testWaitNotifyThread();
                 }
             }
         }.start();
         // 主线程
         for (int i = 0; i < 10; i++) {
-            synchronized (lock) {
+            testWaitNotifyMain();
+        }
+    }
+
+    /**
+     * 子线程循环两次
+     */
+    private void testWaitNotifyThread() {
+        synchronized (lock) {
+            if (!beShouldSub) {
                 // 等待
                 try {
-                    System.out.println("lock主等待");
+                    Log.d("testWaitNotify","子线程等待lock");
                     lock.wait();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                for (int j = 0; j < 3; j++) {
-                    System.out.println("主循环第" + (j + 1) + "次");
-                }
-                // 唤醒
-                System.out.println("lock主唤醒");
-                lock.notify();
             }
+            for (int j = 0; j < 2; j++) {
+                Log.d("testWaitNotify","子循环第" + (j + 1) + "次");
+            }
+            // 子线程执行完毕，子线程标志位设为false
+            beShouldSub = false;
+            // 唤醒
+            Log.d("testWaitNotify","子线程唤醒lock");
+            lock.notify();
+        }
+    }
+
+    /**
+     * 主线程循环3次
+     */
+    private void testWaitNotifyMain() {
+        synchronized (lock) {
+            if (beShouldSub) {
+                // 等待
+                try {
+                    Log.d("testWaitNotify","主线程等待lock");
+                    lock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            for (int j = 0; j < 3; j++) {
+                Log.d("testWaitNotify","主循环第" + (j + 1) + "次");
+            }
+            // 主线程执行完毕，子线程标志位设为true
+            beShouldSub = true;
+            // 唤醒
+            Log.d("testWaitNotify","主线程唤醒lock");
+            lock.notify();
         }
     }
 

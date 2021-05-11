@@ -61,6 +61,14 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnThreadNewName"/>
 
+    <Button
+        android:id="@+id/btnYield"
+        android:onClick="onClick"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Yield示例"
+        app:layout_constraintStart_toEndOf="@+id/btnSleep"
+        app:layout_constraintTop_toBottomOf="@+id/btnJoin"/>
 
     <Button
         android:id="@+id/btnSynchronized"
@@ -116,5 +124,7 @@
         android:text="Wait和Notify示例"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/btnWait"/>
+
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
