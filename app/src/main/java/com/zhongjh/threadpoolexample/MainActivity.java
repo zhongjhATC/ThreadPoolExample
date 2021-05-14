@@ -7,6 +7,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author zhongjh
  */
@@ -56,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case R.id.btnWaitNotify:
                 testWaitNotify();
+                break;
+            case R.id.btnNewThreadPool:
+                newThreadPool();
                 break;
             default:
                 break;
@@ -122,7 +132,10 @@ public class MainActivity extends AppCompatActivity {
      * Yield示例
      */
     private void testYield() {
-
+        MyThreadYield myThread1 = new MyThreadYield("线程一");
+        MyThreadYield myThread2 = new MyThreadYield("线程二");
+        myThread1.start();
+        myThread2.start();
     }
 
     private final Object lockObject = new Object();
@@ -321,6 +334,17 @@ public class MainActivity extends AppCompatActivity {
             Log.d("testWaitNotify","主线程唤醒lock");
             lock.notify();
         }
+    }
+
+    /**
+     * 创建线程池
+     *
+     *
+     */
+    private void newThreadPool(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,
+                               BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
+//        ThreadPoolExecutor executorService = new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60, TimeUnit.SECONDS,
+//                new SynchronousQueue<Runnable>(), Util.threadFactory("OkHttp Dispatcher", false));
     }
 
 }
