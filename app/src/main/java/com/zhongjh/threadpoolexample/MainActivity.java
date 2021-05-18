@@ -72,6 +72,23 @@ public class MainActivity extends AppCompatActivity {
                         null,
                         null);
                 break;
+            case R.id.btnVolatileNo:
+                testVolatileNo();
+                break;
+            case R.id.btnLinkedBlockingQueueOffer:
+                testLinkedBlockingQueueOffer();
+                break;
+            case R.id.btnSingle:
+                testSingle();
+                break;
+            case R.id.btnCached:
+                testCached();
+            case R.id.btnIo:
+                testIo();
+            case R.id.btnCpu:
+                testCpu();
+            case R.id.btnFixed:
+                testFixed();
             default:
                 break;
         }
@@ -374,4 +391,155 @@ public class MainActivity extends AppCompatActivity {
             return null;
         }
     }
+
+    /**
+     * 这是Volatile的一个错误示范
+     * 事实上运行它会发现每次运行结果都不一致，都是一个小于10000的数字。
+     * 可见性只能保证每次读取的是最新的值，但是volatile没办法保证对变量的操作的原子性
+     * 自增操作是不具备原子性的，它包括读取变量的原始值、进行加1操作、写入工作内存
+     * 那么就是说自增操作的三个子操作可能会分割开执行，就有可能导致下面这种情况出现：
+     * 假如某个时刻变量inc的值为10
+     * 线程1对变量进行自增操作，线程1先读取了变量inc的原始值，然后线程1被阻塞了
+     * 然后线程2对变量进行自增操作，线程2也去读取变量inc的原始值，增加1变成11，并把11写入工作内存，最后写入主存
+     * 然后线程1接着进行加1操作，由于已经读取了inc的值，注意此时在线程1的工作内存中inc的值仍然为10，所以线程1对inc进行加1操作后inc的值为11，然后将11写入工作内存，最后写入主存。
+     * 那么两个线程分别进行了一次自增操作后，inc只增加了1。
+     */
+    private void testVolatileNo() {
+        final Test test = new Test();
+        for (int i = 0; i < 10; i++) {
+            int finalI = i;
+            new Thread() {
+                @Override
+                public void run() {
+                    for (int j = 0; j < 1000; j++) {
+                        test.increase();
+                    }
+                    if (finalI == 9) {
+                        System.out.println("test.inc: " + test.inc);
+                    }
+                }
+            }.start();
+        }
+    }
+
+    /**
+     * 这是测试LinkedBlockingQueue的offer的意义
+     */
+    private void testLinkedBlockingQueueOffer() {
+        LinkedBlockingQueue<String> fruitQueue = new LinkedBlockingQueue<>(2);
+
+        System.out.println(fruitQueue.offer("apple"));
+        System.out.println(fruitQueue.offer("orange"));
+        System.out.println(fruitQueue.offer("berry"));
+        System.out.println(fruitQueue.size());
+
+    }
+
+    /**
+     * 这是测试ThreadUtils工具类的Single
+     * Logcat搜索TAG为ThreadUtils
+     */
+    private void testSingle() {
+        for (int i = 0; i < 1000; i++) {
+            int finalI = i;
+            ThreadUtils.executeByCached(new ThreadUtils.BaseSimpleBaseTask<Object>() {
+                @Override
+                public Object doInBackground() {
+                    return finalI;
+                }
+
+                @Override
+                public void onSuccess(Object result) {
+                    Log.d("testSingle", result + "");
+                }
+            });
+        }
+    }
+
+
+    /**
+     * 这是测试ThreadUtils工具类的Cached
+     * 测试方法，点击按钮后，过60秒闲置时间后，再次点击该按钮
+     * Logcat搜索TAG为ThreadUtils
+     */
+    private void testCached() {
+        for (int i = 0; i < 128; i++) {
+            int finalI = i;
+            ThreadUtils.executeByCached(new ThreadUtils.BaseSimpleBaseTask<Object>() {
+                @Override
+                public Object doInBackground() {
+                    return finalI;
+                }
+
+                @Override
+                public void onSuccess(Object result) {
+                    Log.d("testSingle", result + "");
+                }
+            });
+        }
+    }
+
+    /**
+     * 这是测试ThreadUtils工具类的Io
+     * Logcat搜索TAG为ThreadUtils
+     */
+    private void testIo() {
+        for (int i = 0; i < 1000; i++) {
+            int finalI = i;
+            ThreadUtils.executeByIo(new ThreadUtils.BaseSimpleBaseTask<Object>() {
+                @Override
+                public Object doInBackground() {
+                    return finalI;
+                }
+
+                @Override
+                public void onSuccess(Object result) {
+                    Log.d("testSingle", result + "");
+                }
+            });
+        }
+    }
+
+    /**
+     * 这是测试ThreadUtils工具类的Cpu
+     * Logcat搜索TAG为ThreadUtils
+     */
+    private void testCpu() {
+        for (int i = 0; i < 1000; i++) {
+            int finalI = i;
+            ThreadUtils.executeByCpu(new ThreadUtils.BaseSimpleBaseTask<Object>() {
+                @Override
+                public Object doInBackground() {
+                    return finalI;
+                }
+
+                @Override
+                public void onSuccess(Object result) {
+                    Log.d("testSingle", result + "");
+                }
+            });
+        }
+    }
+
+    /**
+     * 这是测试ThreadUtils工具类的Fixed
+     * Logcat搜索TAG为ThreadUtils
+     */
+    private void testFixed() {
+        for (int i = 0; i < 1000; i++) {
+            int finalI = i;
+            ThreadUtils.executeByFixed(10, new ThreadUtils.BaseSimpleBaseTask<Object>() {
+                @Override
+                public Object doInBackground() {
+                    return finalI;
+                }
+
+                @Override
+                public void onSuccess(Object result) {
+                    Log.d("testSingle", result + "");
+                }
+            });
+        }
+    }
+
 }

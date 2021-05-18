@@ -41,12 +41,17 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class ThreadUtils {
 
+    private static final String TAG = ThreadUtils.class.getSimpleName();
+
     private static final Handler HANDLER = new Handler(Looper.getMainLooper());
 
     private static final Map<Integer, Map<Integer, ExecutorService>> TYPE_PRIORITY_POOLS = new HashMap<>();
 
     private static final Map<BaseTask, ExecutorService> TASK_POOL_MAP = new ConcurrentHashMap<>();
 
+    /**
+     * 返回的是可用的计算资源，而不是CPU物理核心数
+     */
     private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
     private static final ScheduledExecutorService mExecutorService = new ScheduledThreadPoolExecutor(1, (ThreadFactory) Thread::new);
 
@@ -67,10 +72,17 @@ public final class ThreadUtils {
         return Looper.myLooper() == Looper.getMainLooper();
     }
 
+    /**
+     * @return 返回ui的handler
+     */
     public static Handler getMainHandler() {
         return HANDLER;
     }
 
+    /**
+     * 在ui主线程上执行事件
+     * @param runnable 事件
+     */
     public static void runOnUiThread(final Runnable runnable) {
         if (Looper.myLooper() == Looper.getMainLooper()) {
             runnable.run();
@@ -79,6 +91,11 @@ public final class ThreadUtils {
         }
     }
 
+    /**
+     * 在ui主线程上执行事件
+     * @param runnable 事件
+     * @param delayMillis Runnable被执行之前的延迟(毫秒)。
+     */
     public static void runOnUiThreadDelayed(final Runnable runnable, long delayMillis) {
         HANDLER.postDelayed(runnable, delayMillis);
     }
@@ -995,17 +1012,30 @@ public final class ThreadUtils {
         return getPoolByTypeAndPriority(type, Thread.NORM_PRIORITY);
     }
 
+    /**
+     * 根据类型获取线程池
+     * @param type 类型
+     * @param priority 优先级
+     * @return 线程池
+     */
     private static ExecutorService getPoolByTypeAndPriority(final int type, final int priority) {
+        // 同步map安全，防止线程不安全创建多个 Map线程池
         synchronized (TYPE_PRIORITY_POOLS) {
             ExecutorService pool;
+            // 通过类型获取 Map线程池
             Map<Integer, ExecutorService> priorityPools = TYPE_PRIORITY_POOLS.get(type);
             if (priorityPools == null) {
+                // 如果没有 Map线程池 则新建一个
                 priorityPools = new ConcurrentHashMap<>();
                 pool = ThreadPoolExecutor4Util.createPool(type, priority);
+                // 加入线程池
                 priorityPools.put(priority, pool);
+                // 新建后加入 Map线程池
                 TYPE_PRIORITY_POOLS.put(type, priorityPools);
             } else {
+                // 根据线程池优先级获取线程池
                 pool = priorityPools.get(priority);
+                // 如果没有该线程池，则创建新的线程池
                 if (pool == null) {
                     pool = ThreadPoolExecutor4Util.createPool(type, priority);
                     priorityPools.put(priority, pool);
@@ -1015,35 +1045,51 @@ public final class ThreadUtils {
         }
     }
 
+    /**
+     * 继承于ThreadPoolExecutor
+     */
     static final class ThreadPoolExecutor4Util extends ThreadPoolExecutor {
 
+        /**
+         * 创建线程池
+         * @param type 类型
+         * @param priority 优先级
+         * @return 线程池
+         */
         private static ExecutorService createPool(final int type, final int priority) {
             switch (type) {
                 case TYPE_SINGLE:
+                    // 创建 核心线程数为1，线程池最大线程数量为1，非核心线程空闲存活时长为0
+                    // 只创建一个线程确保 顺序执行的场景，并且只有一个线程在执行
                     return new ThreadPoolExecutor4Util(1, 1,
                             0L, TimeUnit.MILLISECONDS,
                             new LinkedBlockingQueue4Util(),
                             new UtilsThreadFactory("single", priority)
                     );
                 case TYPE_CACHED:
+                    // 创建 核心线程数为0，线程池最大线程数量为128，非核心线程空闲存活时长为60秒
+                    // 线程数为128个一般用于处理执行时间比较短的任务
                     return new ThreadPoolExecutor4Util(0, 128,
                             60L, TimeUnit.SECONDS,
                             new LinkedBlockingQueue4Util(true),
                             new UtilsThreadFactory("cached", priority)
                     );
                 case TYPE_IO:
+                    // 创建 核心线程数为可计算资源*2+1,线程池最大线程数量为可计算资源*2+1，非核心线程空闲存活时长为30秒
                     return new ThreadPoolExecutor4Util(2 * CPU_COUNT + 1, 2 * CPU_COUNT + 1,
                             30, TimeUnit.SECONDS,
                             new LinkedBlockingQueue4Util(),
                             new UtilsThreadFactory("io", priority)
                     );
                 case TYPE_CPU:
+                    // 创建 核心线程数为可计算资源+1,线程池最大线程数量为可计算资源*2+1，非核心线程空闲存活时长为30秒
                     return new ThreadPoolExecutor4Util(CPU_COUNT + 1, 2 * CPU_COUNT + 1,
                             30, TimeUnit.SECONDS,
                             new LinkedBlockingQueue4Util(true),
                             new UtilsThreadFactory("cpu", priority)
                     );
                 default:
+                    // 创建 核心线程数、线程池最大数量为自定义的，空闲存活时长为0
                     return new ThreadPoolExecutor4Util(type, type,
                             0L, TimeUnit.MILLISECONDS,
                             new LinkedBlockingQueue4Util(),
@@ -1096,8 +1142,35 @@ public final class ThreadUtils {
         }
     }
 
+    /**
+     * 任务队列类
+     * LinkedBlockingQueue这个队列接收到任务的时候，如果当前线程数小于核心线程数，则新建线程(核心线程)处理任务；
+     * 如果当前线程数等于核心线程数，则进入队列等待。
+     * 由于这个队列没有最大值限制，即所有超过核心线程数的任务都将被添加到队列中，
+     * 这也就导致了 maximumPoolSize 的设定失效，因为总线程数永远不会超过 corePoolSize
+     *
+     * size()是线程队伍排列的总数
+     *
+     * TYPE_SINGLE：
+     * 该类型的线程池mPool一直只有一条线程，并且size会自动随着队列增长而增长，没有最大值的限制。offer一直为true
+     * TYPE_CACHED：
+     * 该类型会先给线程池添加线程，总数128，这时候offer一直返回false,当线程数达到128条后，就会加入线程队伍队列，此时offer返回true
+     * 当60秒闲置时间过了以后，线程池mPool会慢慢清空线程，此时再次调用，就会重新添加线程到线程池，重走上面的步骤
+     * TYPE_IO:
+     * 涉及到网络、磁盘IO的任务都是IO密集型任务
+     * 核心线程和总线程是根据cpu计算的，是cpu的2倍+1，并且队列size会自动随着队列增长而增长，没有最大值的限制。offer一直为true
+     * TYPE_CPU:
+     * 核心线程和总线程是根据cpu计算的，总线程是cpu的数量+1，总线程是cpu的2倍+1
+     * 并且队列size会自动随着队列增长而增长，没有最大值的限制。当线程没加入队列前，offer一直为true
+     * 其他，例如Fixed：
+     * 核心线程和总线程是自定义的，并且size会自动随着队列增长而增长，没有最大值的限制。offer一直为true
+     *
+     */
     private static final class LinkedBlockingQueue4Util extends LinkedBlockingQueue<Runnable> {
 
+        /**
+         * 线程池
+         */
         private volatile ThreadPoolExecutor4Util mPool;
 
         private int mCapacity = Integer.MAX_VALUE;
@@ -1120,15 +1193,29 @@ public final class ThreadUtils {
 
         @Override
         public boolean offer(@NonNull Runnable runnable) {
+            Log.d(TAG,"mCapacity:" + mCapacity + "size():" + size() + "mPool:" + (mPool != null ? mPool.getPoolSize() : "null"));
+            boolean isOffer;
+            // 如果线程数最大值 小于等于 当前线程数 并且 线程池不为空 并且 线程池的线程总数小于线程池的线程总数值
             if (mCapacity <= size() &&
                     mPool != null && mPool.getPoolSize() < mPool.getMaximumPoolSize()) {
-                // create a non-core thread
-                return false;
+                // 返回false表示不加入队列
+                isOffer = false;
+                if (!isOffer) {
+                    Log.d(TAG, "isOffer:" + isOffer);
+                }
+                return isOffer;
             }
-            return super.offer(runnable);
+            isOffer = super.offer(runnable);
+            if (!isOffer) {
+                Log.d(TAG, "isOffer:" + isOffer);
+            }
+            return isOffer;
         }
     }
 
+    /**
+     * 线程工厂类
+     */
     static final class UtilsThreadFactory extends AtomicLong
             implements ThreadFactory {
         private static final AtomicInteger POOL_NUMBER = new AtomicInteger(1);
