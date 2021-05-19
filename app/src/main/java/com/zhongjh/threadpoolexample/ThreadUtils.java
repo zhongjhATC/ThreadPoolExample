@@ -53,6 +53,9 @@ public final class ThreadUtils {
      * 返回的是可用的计算资源，而不是CPU物理核心数
      */
     private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
+    /**
+     * 可以实现循环或延迟任务的线程池
+     */
     private static final ScheduledExecutorService mExecutorService = new ScheduledThreadPoolExecutor(1, (ThreadFactory) Thread::new);
 
     private static final byte TYPE_SINGLE = -1;
@@ -311,11 +314,12 @@ public final class ThreadUtils {
 
     /**
      * Executes the given task in a fixed thread pool at fix rate.
+     * 在固定的线程池中以固定的速率煦暖执行给定的任务。
      *
      * @param size         The size of thread in the fixed thread pool.
      * @param baseTask         The task to execute.
      * @param initialDelay The time to delay first execution.
-     * @param period       The period between successive executions.
+     * @param period       The period between successive executions. 周期时间
      * @param unit         The time unit of the initialDelay and period parameters.
      * @param <T>          The type of the task's result.
      */
@@ -467,8 +471,9 @@ public final class ThreadUtils {
 
     /**
      * Executes the given task in a cached thread pool.
+     * 在缓存的线程池中执行给定的任务。
      *
-     * @param baseTask The task to execute.
+     * @param baseTask The task to execute. 要执行的任务。
      * @param <T>  The type of the task's result.
      */
     public static <T> void executeByCached(final BaseTask<T> baseTask) {
@@ -637,6 +642,7 @@ public final class ThreadUtils {
 
     /**
      * Executes the given task in an IO thread pool at fix rate.
+     * 在IO线程池中以固定的速率执行给定的任务。
      *
      * @param baseTask   The task to execute.
      * @param period The period between successive executions.
@@ -1098,6 +1104,9 @@ public final class ThreadUtils {
             }
         }
 
+        /**
+         * 创建一个原子类
+         */
         private final AtomicInteger mSubmittedCount = new AtomicInteger();
 
         private LinkedBlockingQueue4Util mWorkQueue;
@@ -1121,6 +1130,7 @@ public final class ThreadUtils {
 
         @Override
         protected void afterExecute(Runnable r, Throwable t) {
+            // 先自减再获取减1后的值
             mSubmittedCount.decrementAndGet();
             super.afterExecute(r, t);
         }
@@ -1130,11 +1140,12 @@ public final class ThreadUtils {
             if (this.isShutdown()) {
                 return;
             }
+            // 先自增再获取加1后的值
             mSubmittedCount.incrementAndGet();
             try {
                 super.execute(command);
             } catch (RejectedExecutionException ignore) {
-                Log.e("ThreadUtils", "This will not happen!");
+                Log.e(TAG, "This will not happen!");
                 mWorkQueue.offer(command);
             } catch (Throwable t) {
                 mSubmittedCount.decrementAndGet();
@@ -1193,7 +1204,7 @@ public final class ThreadUtils {
 
         @Override
         public boolean offer(@NonNull Runnable runnable) {
-            Log.d(TAG,"mCapacity:" + mCapacity + "size():" + size() + "mPool:" + (mPool != null ? mPool.getPoolSize() : "null"));
+            Log.d(TAG,"offer mCapacity:" + mCapacity + "size():" + size() + "mPool:" + (mPool != null ? mPool.getPoolSize() : "null"));
             boolean isOffer;
             // 如果线程数最大值 小于等于 当前线程数 并且 线程池不为空 并且 线程池的线程总数小于线程池的线程总数值
             if (mCapacity <= size() &&
@@ -1284,11 +1295,20 @@ public final class ThreadUtils {
         private static final int INTERRUPTED = 5;
         private static final int TIMEOUT = 6;
 
+        /**
+         * 原子类的状态
+         */
         private final AtomicInteger state = new AtomicInteger(NEW);
 
         private volatile boolean isSchedule;
+        /**
+         * 共享变量 线程
+         */
         private volatile Thread runner;
 
+        /**
+         * 可以实现循环或延迟任务的线程池
+         */
         private ScheduledExecutorService mExecutorService;
         private long mTimeoutMillis;
         private OnTimeoutListener mTimeoutListener;
@@ -1321,27 +1341,36 @@ public final class ThreadUtils {
 
         @Override
         public void run() {
+            // 判断是否循环计划内的
             if (isSchedule) {
+                // 因为如果是在循环内的，那么runner还是之前的
                 if (runner == null) {
+                    // 判断当前状态如果是New，便赋值state=RUNNING，如果不是New，便返回
                     if (!state.compareAndSet(NEW, RUNNING)) {
                         return;
                     }
+                    // 获取当前线程
                     runner = Thread.currentThread();
                     if (mTimeoutListener != null) {
                         Log.w("ThreadUtils", "Scheduled task doesn't support timeout.");
                     }
                 } else {
+                    // 如果不是RUNNING便直接返回
                     if (state.get() != RUNNING) {
                         return;
                     }
                 }
             } else {
+                // 判断当前状态如果是New，便赋值state=RUNNING，如果不是New，便返回
                 if (!state.compareAndSet(NEW, RUNNING)) {
                     return;
                 }
+                // 获取当前线程
                 runner = Thread.currentThread();
                 if (mTimeoutListener != null) {
+                    // 实例化 循环或延迟任务的线程池
                     mExecutorService = new ScheduledThreadPoolExecutor(1, (ThreadFactory) Thread::new);
+                    // 调用了延迟运行任务
                     mExecutorService.schedule(new TimerTask() {
                         @Override
                         public void run() {
@@ -1354,27 +1383,35 @@ public final class ThreadUtils {
                 }
             }
             try {
+                // 执行doInBackground方法获取值
                 final T result = doInBackground();
+                // 判断是否循环计划内的
                 if (isSchedule) {
+                    // 如果不是RUNNING便直接返回
                     if (state.get() != RUNNING) {
                         return;
                     }
                     getDeliver().execute(() -> onSuccess(result));
                 } else {
+                    // 判断当前状态如果是RUNNING，便赋值state=COMPLETING，如果不是RUNNING，便返回
                     if (!state.compareAndSet(RUNNING, COMPLETING)) {
                         return;
                     }
+                    // 执行成功方法，getDeliver()已经封装了跳转ui线程
                     getDeliver().execute(() -> {
                         onSuccess(result);
                         onDone();
                     });
                 }
             } catch (InterruptedException ignore) {
+                // 被中断了，判断当前状态如果是CANCELLED，便赋值state=INTERRUPTED
                 state.compareAndSet(CANCELLED, INTERRUPTED);
             } catch (final Throwable throwable) {
+                // 如果出现异常了，判断当前状态如果是RUNNING，便赋值EXCEPTIONAL
                 if (!state.compareAndSet(RUNNING, EXCEPTIONAL)) {
                     return;
                 }
+                // 执行成功方法，getDeliver()已经封装了跳转ui线程
                 getDeliver().execute(() -> {
                     onFail(throwable);
                     onDone();

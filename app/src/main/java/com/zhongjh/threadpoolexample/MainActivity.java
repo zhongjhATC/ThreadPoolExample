@@ -15,6 +15,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 /**
  * @author zhongjh
  */
@@ -89,6 +91,9 @@ public class MainActivity extends AppCompatActivity {
                 testCpu();
             case R.id.btnFixed:
                 testFixed();
+                break;
+            case R.id.btnFixedPeriod:
+                testFixedPeriod();
             default:
                 break;
         }
@@ -538,7 +543,28 @@ public class MainActivity extends AppCompatActivity {
                 public void onSuccess(Object result) {
                     Log.d("testSingle", result + "");
                 }
-            });
+            }, 10);
+        }
+    }
+
+    /**
+     * 这是测试ThreadUtils工具类的Fixed,每次循环10秒执行一次
+     * Logcat搜索TAG为ThreadUtils
+     */
+    private void testFixedPeriod() {
+        for (int i = 0; i < 1000; i++) {
+            int finalI = i;
+            ThreadUtils.executeByFixedAtFixRate(10, new ThreadUtils.BaseSimpleBaseTask<Object>() {
+                @Override
+                public Object doInBackground() {
+                    return finalI;
+                }
+
+                @Override
+                public void onSuccess(Object result) {
+                    Log.d("testSingle", result + "");
+                }
+            }, 1, 10, SECONDS);
         }
     }
 
